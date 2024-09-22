@@ -72,8 +72,7 @@ def getownuserinfo():
 @main.route('/userinfo', methods=['POST'])
 def getuserinfo():
     data = request.get_json()
-    id = data['id']
-    user = User.query.filter_by(id=id).first()
+    user = User.query.filter_by(id=data['id']).first()
 
     if not user:
         abort(404)
@@ -86,3 +85,17 @@ def getuserinfo():
     }
 
     return jsonify(user_data), 200
+
+@main.route('/changeuserinfo', methods=['POST'])
+def setuserinfo():
+    data = request.get_json
+    
+    if current_user.admin == False:
+        return "You must be a server administrator to perform this action.", 403
+    
+    user = User.query.filter_by(id=data['id']) if 'id' in data else None
+    if 'username' in data: user.username = data['username']
+    if 'newID' in data: user.id = data['newID']
+    if 'mail' in data: user.mail = data['mail']
+    if 'packages' in data: user.packages = data['packages']
+    if 'admin' in data: user.admin = bool(data['admin'])
