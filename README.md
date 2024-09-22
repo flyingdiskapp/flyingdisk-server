@@ -1,4 +1,4 @@
-# Birdy server
+# FdServer
 
 ## Information
 
