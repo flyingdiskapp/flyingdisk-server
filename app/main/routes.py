@@ -4,7 +4,7 @@ import json
 import os
 import re
 from . import main
-from ..models import User, Package
+from ..models import User, Package, PackageVersion
 from .. import db
 from .publish import publish
 
@@ -21,34 +21,44 @@ def install_route(package, package_version, filename):
     package_dir = os.path.join(current_app.root_path, 'packages', package, package_version)
     return send_from_directory(package_dir, filename)
 
-@main.route('/packages/package/<package_version>.json', methods=['GET'])
+@main.route('/packages/<package>/<package_version>.json', methods=['GET'])
 def package_info_route(package, package_version):
-    package = Package.query.filter_by(package=package, version=package_version).first()
+    package_version_obj = PackageVersion.query.join(Package).filter(
+        Package.name == package, 
+        PackageVersion.version == package_version
+    ).first()
+
+    if package_version_obj is None:
+        return jsonify({"error": "Package not found"}), 404
+
     package_data = {
-        "package": package.package,
-        "name": package.name,
-        "shortDescription": package.shortDescription,
-        "description": package.description,
-        "version": package_version,
-        "dependencies": package.dependencies,
-        "files": package.files
+        "package": package_version_obj.package.name,
+        "name": package_version_obj.name,
+        "shortDescription": package_version_obj.short_description,
+        "description": package_version_obj.description,
+        "version": package_version_obj.version,
+        "dependencies": package_version_obj.dependencies,
+        "files": package_version_obj.files
     }
 
     return jsonify(package_data), 200
 
 @main.route('/packages/<package>/latest.json', methods=['GET'])
 def latest_package_info_route(package):
-    package = Package.query.filter_by(package=package).order_by(Package.version.desc()).first()
-    if package is None:
+    latest_package_version = PackageVersion.query.join(Package).filter(
+        Package.name == package
+    ).order_by(PackageVersion.version.desc()).first()
+
+    if latest_package_version is None:
         return jsonify({"error": "Package not found"}), 404
     
     package_data = {
-        "package": package.package,
-        "name": package.name,
-        "shortDescription": package.shortDescription,
-        "description": package.description,
-        "version": package.version,
-        "files": package.files
+        "package": latest_package_version.package.name,
+        "name": latest_package_version.name,
+        "shortDescription": latest_package_version.short_description,
+        "description": latest_package_version.description,
+        "version": latest_package_version.version,
+        "files": latest_package_version.files
     }
     
     return jsonify(package_data), 200
@@ -89,10 +99,10 @@ def getuserinfo():
 @main.route('/changeuserinfo', methods=['POST'])
 def setuserinfo():
     data = request.get_json
-    
+
     if current_user.admin == False:
         return "You must be a server administrator to perform this action.", 403
-    
+
     user = User.query.filter_by(id=data['id']) if 'id' in data else None
     if 'username' in data: user.username = data['username']
     if 'newID' in data: user.id = data['newID']

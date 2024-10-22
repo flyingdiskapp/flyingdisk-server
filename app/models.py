@@ -10,12 +10,16 @@ class User(UserMixin, db.Model):
     admin = db.Column(db.Boolean, nullable=False)
 
 class Package(db.Model):
-    package = db.Column(db.Text, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    shortDescription = db.Column(db.Text, nullable=True)
-    description = db.Column(db.Text, nullable=True)
-    version = db.Column(db.String(20), nullable=False)
-    files = db.Column(db.JSON, nullable=False, default=[])
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(30), nullable=False, unique=True)
+    author = db.Column(db.String(30), nullable=False)
+    versions = db.relationship('PackageVersion', backref='package', lazy=True)
 
-    __table_args__ = (db.UniqueConstraint(
-        'name', 'version', name='_name_version_uc'),)
+class PackageVersion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.String(10), nullable=False)
+    short_description = db.Column(db.String(100), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    changelog = db.Column(db.Text, nullable=True)
+    files = db.Column(db.JSON, nullable=False, default=[])
+    tags = db.Column(db.JSON, nullable=True, default=[])
